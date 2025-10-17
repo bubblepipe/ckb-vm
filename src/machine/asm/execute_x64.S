@@ -590,27 +590,34 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIV:
   DECODE_R
-  push RD
-  movq $INT64_MIN, RD
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  cmp RD, RS1
-  jne .div_branch1
-  cmp $-1, RS2r
-  jne .div_branch1
-  jmp .div_branch3
-.div_branch1:
-  test RS2r, RS2r
-  jne .div_branch2
-  movq $UINT64_MAX, RS1
-  jmp .div_branch3
-.div_branch2:
+  test RS2r, RS2r                  # check if RS2r == 0
+  je .div_by_zero                  # handle div by zero
+  test RS1, RS1
+  jns .div_normal                  # jump if RS1 >= 0
+  movq $INT64_MIN, RD              # for negative RS1, check for INT64_MIN/-1
+  cmp RD, RS1                      # if RS1 != INT64_MIN
+  jne .div_normal 
+  cmp $-1, RS2r                    # if RS1 == INT64_MIN and RS2r == -1
+  je .div_overflow
+.div_normal:
   MOV_RS1_TO_RAX
-  cqo
+  cqo # sign extend 
   idivq RS2r
   MOV_RAX_TO_RS1
-.div_branch3:
-  pop RD
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.div_by_zero:
+  movq $UINT64_MAX, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.div_overflow:
+  movq $INT64_MIN, RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
@@ -657,30 +664,39 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVW:
   DECODE_R
-  push RD
-  movq $INT64_MIN, RD
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movslq RS1d, RS1
-  movq REGISTER_ADDRESS(RS2r), RS2r
+  movq REGISTER_ADDRESS(RS2r), RS2r 
   movslq RS2rd, RS2r
-  cmp RD, RS1
-  jne .divw_branch1
-  cmp $-1, RS2r
-  jne .divw_branch1
-  jmp .divw_branch3
-.divw_branch1:
-  test RS2r, RS2r
-  jne .divw_branch2
-  movq $UINT64_MAX, RS1
-  jmp .divw_branch3
-.divw_branch2:
+  test RS2r, RS2r                  # check if RS2r == 0
+  je .divw_by_zero                 # handle div by zero
+  test RS1, RS1
+  jns .divw_normal                 # jump if RS1 >= 0
+  movq $INT64_MIN, RD              # for negative RS1, check for INT64_MIN/-1
+  cmp RD, RS1                      # if RS1 != INT64_MIN
+  jne .divw_normal
+  cmp $-1, RS2r                    # if RS1 == INT64_MIN and RS2r == -1
+  je .divw_overflow
+.divw_normal:
   MOV_RS1_TO_RAX
   cqo
   idivq RS2r
   MOV_RAX_TO_RS1
-.divw_branch3:
-  pop RD
   movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.divw_by_zero:
+  movq $UINT64_MAX, RS1
+  movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.divw_overflow:
+  movq $INT64_MIN, RS1
+  movslq RS1d, RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
@@ -977,27 +993,33 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REM:
   DECODE_R
-  push RD
-  movq $INT64_MIN, RD
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  cmp RD, RS1
-  jne .rem_branch1
-  cmp $-1, RS2r
-  jne .rem_branch1
-  xorq RS1, RS1
-  jmp .rem_branch3
-.rem_branch1:
-  test RS2r, RS2r
-  jne .rem_branch2
-  jmp .rem_branch3
-.rem_branch2:
+  test RS2r, RS2r                  # check if RS2r == 0
+  je .rem_by_zero                  # handle div by zero
+  test RS1, RS1
+  jns .rem_normal                  # jump if RS1 >= 0
+  movq $INT64_MIN, RD              # for negative RS1, check for INT64_MIN/-1
+  cmp RD, RS1                      # if RS1 != INT64_MIN
+  jne .rem_normal
+  cmp $-1, RS2r                    # if RS1 == INT64_MIN and RS2r == -1
+  je .rem_overflow
+.rem_normal:
   MOV_RS1_TO_RAX
   cqo
   idivq RS2r
   MOV_RDX_TO_RS1
-.rem_branch3:
-  pop RD
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.rem_by_zero:
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.rem_overflow:
+  xorq RS1, RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
@@ -1047,30 +1069,37 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMW:
   DECODE_R
-  push RD
-  movq $INT64_MIN, RD
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movslq RS1d, RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
   movslq RS2rd, RS2r
-  cmp RD, RS1
-  jne .remw_branch1
-  cmp $-1, RS2r
-  jne .remw_branch1
-  xorq RS1, RS1
-  jmp .remw_branch3
-.remw_branch1:
-  test RS2r, RS2r
-  jne .remw_branch2
-  jmp .remw_branch3
-.remw_branch2:
+  test RS2r, RS2r                  # check if RS2r == 0
+  je .remw_by_zero                 # handle div by zero
+  test RS1, RS1
+  jns .remw_normal                 # jump if RS1 >= 0
+  movq $INT64_MIN, RD              # for negative RS1, check for INT64_MIN/-1
+  cmp RD, RS1                      # if RS1 != INT64_MIN
+  jne .remw_normal
+  cmp $-1, RS2r                    # if RS1 == INT64_MIN and RS2r == -1
+  je .remw_overflow
+.remw_normal:
   MOV_RS1_TO_RAX
   cqo
   idivq RS2r
   MOV_RDX_TO_RS1
-.remw_branch3:
-  pop RD
   movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.remw_by_zero:
+  movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.remw_overflow:
+  xorq RS1, RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
@@ -2241,30 +2270,38 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_WIDE_DIV:
   DECODE_R4
-  push RD
-  movq $INT64_MIN, RD
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  cmp RD, RS1
-  jne .wide_div_branch1
-  cmp $-1, RS2r
-  jne .wide_div_branch1
-  xorq TEMP1, TEMP1
-  jmp .wide_div_branch3
-.wide_div_branch1:
-  test RS2r, RS2r
-  jne .wide_div_branch2
-  movq RS1, TEMP1
-  movq $UINT64_MAX, RS1
-  jmp .wide_div_branch3
-.wide_div_branch2:
+  test RS2r, RS2r                   # if RS2r == 0
+  je .wide_div_by_zero              # handle div by zero
+  test RS1, RS1                     
+  jns .wide_div_normal              # jump if RS1 >= 0
+  movq $INT64_MIN, RD               # for negative RS1, check for INT64_MIN/-1
+  cmp RD, RS1                       # if RS1 != INT64_MIN
+  jne .wide_div_normal
+  cmp $-1, RS2r                     # if RS1 == INT64_MIN and RS2r == -1
+  je .wide_div_overflow
+.wide_div_normal:
   MOV_RS1_TO_RAX
   cqo
   idivq RS2r
   mov %rdx, TEMP1
   MOV_RAX_TO_RS1
-.wide_div_branch3:
-  pop RD
+  movq TEMP3, RD                    # Restore dest register index
+  WRITE_RS3(TEMP1)
+  WRITE_RD(RS1)
+  NEXT_INST
+.wide_div_by_zero:
+  movq RS1, TEMP1
+  movq $UINT64_MAX, RS1
+  movq TEMP3, RD
+  WRITE_RS3(TEMP1)
+  WRITE_RD(RS1)
+  NEXT_INST
+.wide_div_overflow:
+  xorq TEMP1, TEMP1
+  movq TEMP3, RD
   WRITE_RS3(TEMP1)
   WRITE_RD(RS1)
   NEXT_INST
