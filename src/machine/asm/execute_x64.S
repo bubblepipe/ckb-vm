@@ -623,43 +623,46 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVU:
   DECODE_R
+  movq RD, TEMP3
+  movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  test RS2r, RS2r
-  jne .divu_branch1
-  WRITE_RD_VALUE($UINT64_MAX, RS2r)
-  NEXT_INST
-.divu_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
-  movq REGISTER_ADDRESS(RS1), %rax
-  xorq %rdx, %rdx
+  test RS2r, RS2r                   # check if RS2r == 0
+  je .divu_by_zero                  # handle div by zero
+  MOV_RS1_TO_RAX
+  xorq %rdx, %rdx                   # zero-extend for unsigned division
   divq RS2r
-  mov %rax, RS2r
-  POP_RD_IF_RDX
-  POP_RD_IF_RAX
-  WRITE_RD(RS2r)
+  MOV_RAX_TO_RS1
+  movq TEMP3, RD                   
+  WRITE_RD(RS1)
+  NEXT_INST
+.divu_by_zero:
+  movq $UINT64_MAX, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVUW:
   DECODE_R
+  movq RD, TEMP3
+  movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  mov RS2rd, RS2rd
-  test RS2r, RS2r
-  jne .divuw_branch1
-  WRITE_RD_VALUE($UINT64_MAX, RS2r)
-  NEXT_INST
-.divuw_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
-  movq REGISTER_ADDRESS(RS1), %rax
-  mov %eax, %eax
-  xorq %rdx, %rdx
+  mov RS2rd, RS2rd                  # clear upper 32 bits
+  test RS2r, RS2r                   # check if RS2r == 0
+  je .divuw_by_zero                 # handle div by zero
+  mov RS1d, RS1d                    # clear upper 32 bits
+  MOV_RS1_TO_RAX
+  xorq %rdx, %rdx                   # zero-extend for unsigned division
   divq RS2r
-  mov %rax, RS2r
-  POP_RD_IF_RDX
-  POP_RD_IF_RAX
-  movslq RS2rd, RS2r
-  WRITE_RD(RS2r)
+  MOV_RAX_TO_RS1
+  movslq RS1d, RS1                  # sign-extend result to 64-bit
+  movq TEMP3, RD
+  WRITE_RD(RS1)
+  NEXT_INST
+.divuw_by_zero:
+  movq $UINT64_MAX, RS1
+  movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVW:
@@ -1025,46 +1028,44 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMU:
   DECODE_R
-  movq REGISTER_ADDRESS(RS2r), RS2r
-  test RS2r, RS2r
-  jne .remu_branch2
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
+  movq REGISTER_ADDRESS(RS2r), RS2r
+  test RS2r, RS2r                   # check if RS2r == 0
+  je .remu_by_zero                  # handle div by zero
+  MOV_RS1_TO_RAX
+  xorq %rdx, %rdx                   # zero-extend for unsigned division
+  divq RS2r
+  MOV_RDX_TO_RS1                    # remainder is in %rdx
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
-.remu_branch2:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
-  movq REGISTER_ADDRESS(RS1), %rax
-  xorq %rdx, %rdx
-  divq RS2r
-  mov %rdx, RS2r
-  POP_RD_IF_RDX
-  POP_RD_IF_RAX
-  WRITE_RD(RS2r)
+.remu_by_zero:
+  movq TEMP3, RD
+  WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMUW:
   DECODE_R
-  movq REGISTER_ADDRESS(RS2r), RS2r
-  mov RS2rd, RS2rd
-  test RS2r, RS2r
-  jne .remuw_branch2
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
-  movslq RS1d, RS1
+  movq REGISTER_ADDRESS(RS2r), RS2r
+  mov RS2rd, RS2rd                  # clear upper 32 bits
+  test RS2r, RS2r                   # check if RS2r == 0
+  je .remuw_by_zero                 # handle div by zero
+  mov RS1d, RS1d                    # clear upper 32 bits
+  MOV_RS1_TO_RAX
+  xorq %rdx, %rdx                   # zero-extend for unsigned division
+  divq RS2r
+  MOV_RDX_TO_RS1                    # remainder is in %rdx
+  movslq RS1d, RS1                  # sign-extend 32-bit result to 64-bit
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
-.remuw_branch2:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
-  movq REGISTER_ADDRESS(RS1), %rax
-  mov %eax, %eax
-  xorq %rdx, %rdx
-  divq RS2r
-  mov %rdx, RS2r
-  POP_RD_IF_RDX
-  POP_RD_IF_RAX
-  movslq RS2rd, RS2r
-  WRITE_RD(RS2r)
+.remuw_by_zero:
+  movslq RS1d, RS1
+  movq TEMP3, RD
+  WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMW:
@@ -2308,25 +2309,26 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_WIDE_DIVU:
   DECODE_R4
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
-  test RS2r, RS2r
-  jne .wide_divu_branch1
-  WRITE_RS3(RS1)
-  WRITE_RD_VALUE($UINT64_MAX, RS2r)
-  NEXT_INST
-.wide_divu_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
-  movq RS1, %rax
-  xorq %rdx, %rdx
+  test RS2r, RS2r                   # check if RS2r == 0
+  je .wide_divu_by_zero             # handle div by zero
+  MOV_RS1_TO_RAX
+  xorq %rdx, %rdx                   # zero-extend for unsigned division
   divq RS2r
-  mov %rax, TEMP1
-  MOV_RDX_TO_RS2r
-  POP_RD_IF_RDX
-  POP_RD_IF_RAX
-  WRITE_RS3(RS2r)
-  WRITE_RD(TEMP1)
+  MOV_RDX_TO_RS1                    # remainder is in %rdx
+  movq %rax, TEMP1                  # quotient is in %rax
+  movq TEMP3, RD
+  WRITE_RS3(RS1)                    # Write remainder to RS3
+  WRITE_RD(TEMP1)                   # Write quotient to RD
+  NEXT_INST
+.wide_divu_by_zero:
+  movq RS1, TEMP1
+  movq $UINT64_MAX, RS1
+  movq TEMP3, RD
+  WRITE_RS3(TEMP1)
+  WRITE_RD(RS1)
   NEXT_INST
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_ADC:
