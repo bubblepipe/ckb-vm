@@ -616,13 +616,14 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVU:
   DECODE_R
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .divu_branch1
+  movq TEMP3, RD
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .divu_branch1:
-  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), %rax
   xorq %rdx, %rdx
   divq RS2r
@@ -633,14 +634,15 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVUW:
   DECODE_R
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS2r), RS2r
   mov RS2rd, RS2rd
   test RS2r, RS2r
   jne .divuw_branch1
+  movq TEMP3, RD
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .divuw_branch1:
-  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), %rax
   mov %eax, %eax
   xorq %rdx, %rdx
@@ -999,14 +1001,15 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMU:
   DECODE_R
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .remu_branch2
   movq REGISTER_ADDRESS(RS1), RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .remu_branch2:
-  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), %rax
   xorq %rdx, %rdx
   divq RS2r
@@ -1017,16 +1020,17 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMUW:
   DECODE_R
+  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS2r), RS2r
   mov RS2rd, RS2rd
   test RS2r, RS2r
   jne .remuw_branch2
   movq REGISTER_ADDRESS(RS1), RS1
   movslq RS1d, RS1
+  movq TEMP3, RD
   WRITE_RD(RS1)
   NEXT_INST
 .remuw_branch2:
-  movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), %rax
   mov %eax, %eax
   xorq %rdx, %rdx
@@ -2263,20 +2267,21 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_WIDE_DIVU:
   DECODE_R4
+   movq RD, TEMP3
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .wide_divu_branch1
+  movq TEMP3, RD
   WRITE_RS3(RS1)
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .wide_divu_branch1:
-  movq RD, TEMP3
   movq RS1, %rax
   xorq %rdx, %rdx
   divq RS2r
   mov %rax, TEMP1
-  MOV_RDX_TO_RS2r
+  mov %rdx, RS2r
   movq TEMP3, RD
   WRITE_RS3(RS2r)
   WRITE_RD(TEMP1)
