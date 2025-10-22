@@ -616,14 +616,16 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVU:
   DECODE_R
+  PUSH_RD_IF_RAX
+  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .divu_branch1
+  POP_RD_IF_RDX
+  POP_RD_IF_RAX
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .divu_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS1), %rax
   xorq %rdx, %rdx
   divq RS2r
@@ -635,15 +637,17 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_DIVUW:
   DECODE_R
+  PUSH_RD_IF_RAX
+  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS2r), RS2r
   mov RS2rd, RS2rd
   test RS2r, RS2r
   jne .divuw_branch1
+  POP_RD_IF_RDX
+  POP_RD_IF_RAX
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .divuw_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS1), %rax
   mov %eax, %eax
   xorq %rdx, %rdx
@@ -1003,15 +1007,17 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMU:
   DECODE_R
+  PUSH_RD_IF_RAX
+  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .remu_branch2
   movq REGISTER_ADDRESS(RS1), RS1
+  POP_RD_IF_RDX
+  POP_RD_IF_RAX
   WRITE_RD(RS1)
   NEXT_INST
 .remu_branch2:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS1), %rax
   xorq %rdx, %rdx
   divq RS2r
@@ -1023,17 +1029,19 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_REMUW:
   DECODE_R
+  PUSH_RD_IF_RAX
+  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS2r), RS2r
   mov RS2rd, RS2rd
   test RS2r, RS2r
   jne .remuw_branch2
   movq REGISTER_ADDRESS(RS1), RS1
   movslq RS1d, RS1
+  POP_RD_IF_RDX
+  POP_RD_IF_RAX
   WRITE_RD(RS1)
   NEXT_INST
 .remuw_branch2:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS1), %rax
   mov %eax, %eax
   xorq %rdx, %rdx
@@ -2271,16 +2279,18 @@ ckb_vm_x64_execute:
 .p2align 3
 .CKB_VM_ASM_LABEL_OP_WIDE_DIVU:
   DECODE_R4
+  PUSH_RD_IF_RAX
+  PUSH_RD_IF_RDX
   movq REGISTER_ADDRESS(RS1), RS1
   movq REGISTER_ADDRESS(RS2r), RS2r
   test RS2r, RS2r
   jne .wide_divu_branch1
+  POP_RD_IF_RDX
+  POP_RD_IF_RAX
   WRITE_RS3(RS1)
   WRITE_RD_VALUE($UINT64_MAX, RS2r)
   NEXT_INST
 .wide_divu_branch1:
-  PUSH_RD_IF_RAX
-  PUSH_RD_IF_RDX
   movq RS1, %rax
   xorq %rdx, %rdx
   divq RS2r
